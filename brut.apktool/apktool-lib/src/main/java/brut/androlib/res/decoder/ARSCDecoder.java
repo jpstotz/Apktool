@@ -180,11 +180,11 @@ public class ARSCDecoder {
 
     private void readOverlaySpec() throws AndrolibException, IOException {
         checkChunkType(Header.XML_TYPE_OVERLAY);
-        String name = mIn.readNullEndedString(128, true);
-        String actor = mIn.readNullEndedString(128, true);
+        String name = mIn.readNullEndedString(256, true);
+        String actor = mIn.readNullEndedString(256, true);
         LOGGER.fine(String.format("Overlay name: \"%s\", actor: \"%s\")", name, actor));
 
-        while(nextChunk().type == Header.XML_TYPE_OVERLAY_POLICY) {
+        if (nextChunk().type == Header.XML_TYPE_OVERLAY_POLICY) {
             readOverlayPolicySpec();
         }
     }
