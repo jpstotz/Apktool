@@ -17,6 +17,7 @@
 package brut.util;
 
 import brut.common.BrutException;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,23 +36,33 @@ public class AaptManager {
         File aaptBinary;
         String aaptVersion = getAaptBinaryName(version);
 
-        if (! OSDetection.is64Bit() && OSDetection.isMacOSX()) {
-            throw new BrutException("32 bit OS detected. No 32 bit binaries available.");
-        }
-
         // Set the 64 bit flag
         aaptVersion += OSDetection.is64Bit() ? "_64" : "";
 
+        String aaptPath;
         try {
             if (OSDetection.isMacOSX()) {
-                aaptBinary = Jar.getResourceAsFile("/prebuilt/macosx/" + aaptVersion, AaptManager.class);
+                // MacOS binaries are FAT binaries for x86_64 and arm64
+                if (!OSDetection.is64Bit()) {
+                    throw new BrutException("32 bit OS detected. No 32 bit binaries available.");
+                }
+                aaptPath = "/prebuilt/macosx/" + aaptVersion;
             } else if (OSDetection.isUnix()) {
-                aaptBinary = Jar.getResourceAsFile("/prebuilt/linux/" + aaptVersion, AaptManager.class);
+                // Linux binaries are ELF32 (80386) / ELF64 X86-64
+                if (OSDetection.returnArch().contains("arm")) {
+                    throw new BrutException("ARM CPU detected. Only X86 and X86-64 binaries available.");
+                }
+                aaptPath = "/prebuilt/linux/" + aaptVersion;
             } else if (OSDetection.isWindows()) {
-                aaptBinary = Jar.getResourceAsFile("/prebuilt/windows/" + aaptVersion + ".exe", AaptManager.class);
+                if (OSDetection.returnArch().contains("arm")) {
+                    // All Windows on ARM versions should have 32 bit x86 emulation
+                    aaptVersion = getAaptBinaryName(version); // use 32 bit version
+                }
+                aaptPath = "/prebuilt/windows/" + aaptVersion + ".exe";
             } else {
                 throw new BrutException("Could not identify platform: " + OSDetection.returnOS());
             }
+            aaptBinary = Jar.getResourceAsFile(aaptPath, AaptManager.class);
         } catch (BrutException ex) {
             throw new BrutException(ex);
         }

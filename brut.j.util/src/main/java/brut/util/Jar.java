@@ -17,6 +17,7 @@
 package brut.util;
 
 import brut.common.BrutException;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 
 import java.io.*;
@@ -30,7 +31,8 @@ public abstract class Jar {
     public static File getResourceAsFile(String name, Class<?> clazz) throws BrutException {
         File file = mExtracted.get(name);
         if (file == null) {
-            file = extractToTmp(name, clazz);
+            String filePrefix = FilenameUtils.getName(name).replaceAll("\\W", "");
+            file = extractToTmp(name, "apktool_" + filePrefix, clazz);
             mExtracted.put(name, file);
         }
         return file;
@@ -41,8 +43,7 @@ public abstract class Jar {
     }
 
     public static File extractToTmp(String resourcePath, String tmpPrefix, Class<?> clazz) throws BrutException {
-        try {
-            InputStream in = clazz.getResourceAsStream(resourcePath);
+        try (InputStream in = clazz.getResourceAsStream(resourcePath)){
             if (in == null) {
                 throw new FileNotFoundException(resourcePath);
             }
@@ -51,11 +52,9 @@ public abstract class Jar {
             File fileOut = File.createTempFile(tmpPrefix, suffix + ".tmp");
             fileOut.deleteOnExit();
 
-            OutputStream out = new FileOutputStream(fileOut);
-            IOUtils.copy(in, out);
-            in.close();
-            out.close();
-
+            try (OutputStream out = new FileOutputStream(fileOut)) {
+                IOUtils.copy(in, out);
+            }
             return fileOut;
         } catch (IOException ex) {
             throw new BrutException("Could not extract resource: " + resourcePath, ex);
